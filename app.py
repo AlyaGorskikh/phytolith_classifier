@@ -492,24 +492,24 @@ def model_visualization():
                     result = api_client.cluster(input_data, n_clusters=n_clusters)
 
                     if result and result.get('success'):
+                        # Используем данные, которые вернул API
                         clusters = result['clusters']
+                        X_pca = result['X_pca']  # Берём из ответа API
+                        explained_variance = result.get('explained_variance', [0.5, 0.3])
 
+                        # Создаём объект PCA для хранения в сессии
                         from sklearn.decomposition import PCA
-                        from sklearn.preprocessing import StandardScaler
-
-                        scaler = StandardScaler()
-                        X_scaled = scaler.fit_transform(X)
-
                         pca = PCA(n_components=2)
-                        X_pca = pca.fit_transform(X_scaled)
+                        pca.explained_variance_ratio_ = explained_variance  # Сохраняем для подписей
 
                         st.session_state.clustering_results = {
                             'clusters': clusters,
-                            'X_pca': X_pca,
+                            'X_pca': X_pca,  # Используем из API
                             'n_clusters': n_clusters,
                             'valid_indices': valid_indices,
                             'X': X,
-                            'pca': pca
+                            'pca': pca,
+                            'explained_variance': explained_variance  # Сохраняем для подписей
                         }
 
                         st.success(f"✅ Кластеризация выполнена. Кластеров: {n_clusters}")

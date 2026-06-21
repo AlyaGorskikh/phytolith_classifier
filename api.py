@@ -261,24 +261,37 @@ def predict(data: List[Dict[str, float]]):
 
 @app.post("/model/cluster/")
 def cluster(data: List[Dict[str, float]], n_clusters: int = 3):
-    """Кластеризация данных"""
+    """Кластеризация данных с использованием существующего MLModel"""
     try:
         df = pd.DataFrame(data)
 
-        # Создаем временный scaler и кластеризатор
+        # Проверяем, обучен ли scaler
         from sklearn.preprocessing import StandardScaler
+
+        if not hasattr(ml_model.scaler, 'mean_'):
+            X_scaled = ml_model.scaler.fit_transform(df)
+        else:
+            X_scaled = ml_model.scaler.transform(df)
+
+        # Создаём кластеризатор с нужным n_clusters
         from sklearn.cluster import AgglomerativeClustering
-
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(df)
-
-        clusterer = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
+        clusterer = AgglomerativeClustering(
+            n_clusters=n_clusters,
+            linkage='ward'
+        )
         clusters = clusterer.fit_predict(X_scaled)
+
+        # PCA для визуализации
+        from sklearn.decomposition import PCA
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(X_scaled)
 
         return {
             "success": True,
             "clusters": clusters.tolist(),
-            "n_clusters": n_clusters
+            "X_pca": X_pca.tolist(),
+            "n_clusters": n_clusters,
+            "explained_variance": pca.explained_variance_ratio_.tolist()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
